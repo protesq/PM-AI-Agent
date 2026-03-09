@@ -1,79 +1,156 @@
-# 🤖 PM-AI-Agent (Project Management AI Agent)
+# 🤖 PM-AI-Agent — Project Management AI Agent
 
-Tam teşekküllü (Full-stack) proje yönetim uygulaması. Claude AI destekli asistan(lar) sayesinde doğal dil komutlarıyla proje yönetebilir, Docker servislerinizi kontrol edebilir, MySQL veritabanları oluşturabilir ve yazılım projelerinizin kaynak kodlarını otomatik olarak oluşturabilirsiniz.
+Full-stack proje yönetim uygulaması. **Claude AI** agent'ı doğal dil komutlarıyla proje yönetir, Docker servislerini kontrol eder, MySQL veritabanları oluşturur ve gerçek kaynak kod yazar.
 
-## 🌟 Öne Çıkan Özellikler
-
-- **Çoklu Agent Mimarisi (Multi-Agent System):** Kararların ve süreçlerin tek bir yapıda tıkanmaması için birbiriyle iletişim kuran farklı agent'lar.
-- **Docker Yönetimi:** Konteyner oluşturma, yönetme ve log takibi.
-- **Veritabanı Yönetimi:** MySQL/SQLite destekli tam DB yönetimi (Şema oluşturma, tablo kurgulama).
-- **Proje & Görev Yönetimi:** Kanban tahtası ve görev delegasyonu.
-
----
-
-## 🏗️ Sistem Mimarisi ve Agent'lar Arası İlişki
-
-PM-AI-Agent, klasik istemci-sunucu modelinin ötesine geçerek **Agent Tabanlı Mimari (Agent-Based Architecture)** kullanır. Bu sistemde her bir katman sadece veri iletmekle kalmaz, asıl kararları veren yapay zeka birimleriyle (Claude Agent ve Peer Agent) akışkan ve sürekli bir iletişim halindedir.
-
-### 🔄 Etkileşim Akışı (Front-end ↔ Backend ↔ Agent'lar ↔ DB/Docker)
-
-Kullanıcının sisteme girdiği her bir komut, aşağıdaki bileşenler ve agent'lar arasında işlenir ve sonuca bağlanır:
-
-1. **👤 Kullanıcı (User):** Süreci başlatan kişi. İsteğini doğal dille yazar (Örn: "Bana bir React projesi oluştur ve veritabanı bağlayıp docker'da çalıştır").
-2. **⚛️ Front-end (React UI):** 
-   - İletişimin başladığı ilk kontrol noktasıdır.
-   - Sadece bir arayüz (UI) olmakla kalmaz, anlık olarak sistemin hangi parçasının çalıştığını (Agent yetkilerini, Docker işlemlerini, DB sorgularını) analiz edip `React Flow` şeması üzerinde canlı olarak görselleştirir.
-3. **🟢 Backend (Node.js API):**
-   - Sistemin sinir merkezidir. Front-end'den gelen istekleri alır, durumu değerlendirir ve asıl görevi yapay zeka modeline (Claude) aktarır.
-   - Yapay zekanın sürekliliğini sağlayan "Düşünme Döngüsünü" (Agentic Loop) barındırır.
-4. **🤖 Claude Agent (Ana Yapay Zeka):**
-   - Sistemin ana karar verici beyni. Gelen isteği anlar ve **hangi araçları (Tools)** kullanması gerektiğine karar verir.
-   - Terminalde kod çalıştırabilir, sunucuyu okuyabilir, sıfırdan sistem inşa edebilir.
-5. **🤖 Peer Agent (Yardımcı/Eş Yapay Zeka):**
-   - Claude Agent'ın bir nevi "pair programming" arkadaşıdır. Daha karmaşık görevlerde görev paylaşımı için ana yapay zeka tarafından tetiklenir.
-   - Claude Agent ile **çift yönlü haberleşerek (inter-agent msg)**, problemleri çok daha hızlı çözer ve asıl çıktıların kalitesini devasa ölçüde artırır.
-6. **🗄️ MySQL DB & 🐳 Docker Daemon (Servis Katmanı):**
-   - **Agent ↔ DB İlişkisi:** Backend üzerinden gelen yapay zeka komutları, doğrudan MySQL üzerinde veritabanı ve tablolar oluşturur. Agent, yazdığı SQL komutunun sonucunu anında okur ve bir sonraki kararı ("Eğer tablo oluştuysa kodu yazmaya başlayabilirim") buna göre verir.
-   - **Agent ↔ Docker İlişkisi:** Yapay zeka, doğrudan host sistemdeki Docker API'si (veya CLI) ile iletişime geçer. Bir konteyner patlarsa yapay zeka logları okur, hatayı tespit edip kodda düzeltme yapar ve konteyneri kendi kendine yeniden başlatabilir (Self-healing).
-
-**Bileşen İlişki Haritası:**
-```mermaid
-graph TD
-    User((👤 Kullanıcı)) -->|Prompt| Frontend[⚛️ Front-end]
-    Frontend <-->|REST API| Backend[🟢 Backend API]
-    Backend <-->|Context & Tools| ClaudeAgent[🤖 Claude Agent]
-    ClaudeAgent <-->|Inter-Agent Comm| PeerAgent[🤖 Peer Agent]
-    ClaudeAgent -->|DB Tools| DB[(🗄️ MySQL DB)]
-    ClaudeAgent -->|Docker CLI| Docker[🐳 Docker Engine]
-    
-    Docker --> container1[📦 Frontend App]
-    Docker --> container2[📦 Backend API]
-    Docker --> container3[📦 DB Node]
-```
-
-Bu otonom sistem sayesinde örneğin oluşturulan bir sistem çalışmazsa, **Backend**, **Claude Agent**'a "Hata aldık: log şu" şeklinde veri döndürür, **Claude Agent** durumu **Peer Agent** ile devingen şekilde değerlendirip kodu düzeltir ve tekrar işler. Tüm bu macera, kullanıcıya baştan sona **Front-end** diyagramında animasyonlu olarak yansıtılır.
+> **💡 API Key gerektirmez!** Bilgisayarınızda Claude CLI ile giriş yaptıysanız, uygulamanız doğrudan Pro/Max hesabınızı kullanır.
 
 ---
 
 ## 🚀 Hızlı Başlangıç
 
 ### Gereksinimler
-- Node.js 18+
-- MySQL (Örn: Laragon, XAMPP veya Docker)
-- Docker Desktop
 
-### 1️⃣ Kurulum (Lokal Geliştirme)
+- **Node.js 18+**
+- **Claude CLI** — [claude.ai/download](https://claude.ai/download) adresinden kurun
+- **MySQL** (Laragon, XAMPP vb.) veya `USE_SQLITE=true` ile SQLite
+
+### 1️⃣ Claude CLI ile Giriş Yapın
 
 ```bash
-# İlk olarak hem backend hem frontend klasörlerindeki kütüphaneleri indirelim
-npm run install:all
+# CLI'ı kurun (henüz yoksa)
+npm install -g @anthropic-ai/claude-code
 
-# Çevresel değişken dosyanızı kopyalayın
-cp .env.example .env
+# Claude hesabınızla giriş yapın (Pro veya Max)
+claude login
 ```
-`.env` dosyasındaki ayarlarınız şu şekilde görünmelidir. Burada en önemlisi `ANTHROPIC_API_KEY`:
+
+> Bu adım **tek seferlik**! Giriş yaptıktan sonra uygulama otomatik olarak
+> bilgisayarınızdaki Claude oturumunu kullanır. Ek API key gerekmez.
+
+### 2️⃣ Projeyi Kurun
+
+```bash
+git clone https://github.com/protesq/PM-AI-Agent.git
+cd PM-AI-Agent
+
+# .env dosyasını oluşturun (sadece DB ayarları için)
+cp .env.example .env
+# .env içindeki MySQL bilgilerini doldurun (ANTHROPIC_API_KEY gerekmez!)
+
+# Bağımlılıkları kurun
+npm run install:all
+```
+
+### 3️⃣ Çalıştırın
+
+```bash
+npm run dev
+```
+
+| Arabirim | URL | Açıklama |
+|---|---|---|
+| **Frontend UI** | http://localhost:3000 | Kullanıcı arayüzü ve AI sohbet paneli |
+| **Backend API** | http://localhost:5000 | Agent karar mekanizması ve servis endpointleri |
+
+---
+
+## 🏗️ Sistem Mimarisi — Agent'lar Arası İlişki
+
+PM-AI-Agent, klasik istemci-sunucu modelinin ötesine geçerek **Agent Tabanlı Mimari** kullanır.
+
+### 🔄 Etkileşim Akışı
+
+```
+   👤 Kullanıcı
+       │ prompt
+       ▼
+   ⚛️ Frontend (React + React Flow)
+       │ HTTP POST /api/agent/request
+       ▼
+   🟢 Backend (Node.js/Express)
+       │ subprocess: claude -p --output-format json
+       ▼
+   🤖 Claude Agent (CLI üzerinden)  ◄──► 🤖 Peer Agent
+       │                                    (inter-agent msg)
+       ├──► 🗄️ MySQL DB        (SQL / result)
+       ├──► 🐳 Docker Daemon   (container yönetimi)
+       └──► 📁 Dosya Sistemi   (kod yazma / terminal)
+```
+
+### Bileşenler
+
+| Bileşen | Rol |
+|---|---|
+| **Frontend** | React Flow ile canlı mimari haritası, sohbet paneli |
+| **Backend** | Claude CLI'ı subprocess olarak çağırır, tool sonuçlarını işler |
+| **Claude Agent** | Gelen isteği anlar, 27 araçtan hangisini kullanacağına karar verir |
+| **Peer Agent** | Karmaşık görevlerde ana agent ile çift yönlü haberleşir |
+| **MySQL DB** | Proje/görev verileri ve agent'ın oluşturduğu veritabanları |
+| **Docker** | Agent'ın oluşturduğu projelerin konteyner yönetimi |
+
+### 🔧 Nasıl Çalışıyor? (Claude CLI Entegrasyonu)
+
+```
+1. Kullanıcı mesaj yazar
+       │
+2. Backend "claude -p --output-format json" subprocess çalıştırır
+       │  (bilgisayarınızdaki CLI oturumunu kullanır — API key gerekmez!)
+       │
+3. Claude cevap verir:
+   ├── Araç çağrısı varsa → Backend araçları çalıştırır → 2'ye dön
+   └── Nihai cevap → Kullanıcıya döndür
+```
+
+Backend her istek için `claude -p` komutunu çağırır. CLI zaten bilgisayarınızda giriş yapılmış olduğundan **Pro/Max aboneliğinizi** kullanır. Ayrı API key'e veya kredi kartına gerek yoktur.
+
+---
+
+## 🐳 Docker ile Çalıştırma
+
+```bash
+npm run docker        # docker compose up --build
+npm run stop          # docker compose down
+npm run clean         # docker compose down -v (volume'ları da sil)
+```
+
+| Servis | URL | Açıklama |
+|---|---|---|
+| Frontend | http://localhost:3000 | React + React Flow UI |
+| Backend API | http://localhost:5000 | Node.js/Express + Claude CLI |
+| phpMyAdmin | http://localhost:8080 | MySQL admin paneli |
+
+---
+
+## 💬 Örnek Komutlar
+
+### Proje Yönetimi
+```
+Create a project called Mobile App
+Add 3 tasks to project 1: Design, Development, Testing
+Mark task 1 as done
+Generate a report for project 1
+```
+
+### Docker Yönetimi
+```
+Docker servislerinin durumunu göster
+Backend servisinin loglarını göster
+Frontend konteynerini yeniden başlat
+```
+
+### Full-Stack Proje Oluşturma
+```
+C:/Projects/TodoApp klasöründe React + Node.js + MySQL full-stack proje oluştur
+todoapp veritabanı oluştur ve users + posts tablolarını ekle
+```
+
+---
+
+## ⚙️ Ortam Değişkenleri (.env)
+
 ```env
-ANTHROPIC_API_KEY=sk-ant-...
+# Claude CLI kullanıldığı için API key GEREKMİYOR!
+# ANTHROPIC_API_KEY=sk-ant-...  (devre dışı)
 
 MYSQL_HOST=localhost
 MYSQL_PORT=3306
@@ -81,70 +158,55 @@ MYSQL_USER=root
 MYSQL_PASSWORD=your_password
 MYSQL_DATABASE=aiagent_db
 
-USE_SQLITE=false       # Eğer bilgisayarınızda MySQL yüklü değilse bunu true yapın
+USE_SQLITE=false       # true → SQLite (MySQL gerekmez)
 PORT=5000
 ```
 
-### 2️⃣ Çalıştırma
+---
 
-Tüm uygulamayı aynı terminalden eşzamanlı olarak başlatmak için:
-```bash
-npm run dev
+## 📁 Proje Yapısı
+
 ```
-
-| Arabirim | URL | Açıklama |
-|---|---|---|
-| **Front-end UI** | `http://localhost:3000` | Kullanıcı arayüzü ve yapay zeka ile etkileşim köşesi |
-| **Backend API** | `http://localhost:5000` | Agent karar mekanizması ve servis endpointleri |
-
----
-
-## 🐳 Docker ile Tam İzolasyonlu Çalıştırma
-
-Kendi bilgisayarınızda Node veya veritabanı yığını olmasını istemiyorsanız, tüm projeyi sadece Docker içinden izole olarak başlatabilirsiniz:
-
-```bash
-npm run docker        # Projeyi docker compose ile build eder ve arka planda başlatır
-npm run stop          # Konteynerleri güvenle durdurur
-npm run clean         # Konteynerleri bitirir ve içindeki tüm uygulama (volume) verilerini temizler
-```
-
----
-
-## 🛠 Neler Yapabilirsiniz? (Örnek Kullanımlar)
-
-Sisteme bağlandıktan sonra sohbet kısmından yapay zekaya şu direktifleri verebilirsiniz:
-
-- **Sıfırdan Proje Yaratma:** "C:/Projeler klasörüne benim için bir Next.js e-ticaret uygulaması oluştur, backend'i nodejs olsun. Kullanıcı tablolarını oluştur."
-- **Sistem Okuma & Debug:** "Docker üzerindeki frontend servisimin loglarında ne hata var? Kontrol edip kodları düzelt."
-- **DB Manipülasyonu:** "Sistemde yeni bir aiagent_yedek veritabanı kur ve içine test adlı bir tablo ekle."
-- **Uygulama İçi PM:** "Görevler panosundan 'Tasarım eksiklerini tamamla' görevini kapat ve bana haftalık proje raporu çıkar."
-
----
-
-## ⚙️ Uygulama Dizin Yapısı ve Detayları
-
-```text
-aiagent/
-├── .env                          # Şifreler ve ortam çevre değişkenleri
-├── docker-compose.yml            # Frontend, Backend, PMADmin, DB servis deklarasyonları
-├── package.json                  # Projenin geneli için scriptler
+PM-AI-Agent/
+├── .env.example              # Örnek ortam değişkenleri
+├── docker-compose.yml        # 4 servis: frontend, backend, db, phpmyadmin
+├── package.json              # Root: concurrently ile npm run dev
 │
 ├── backend/
-│   ├── system-prompt.md          # Yapay zekanın "Şahsiyeti" (Arayüzden güncellenebilir)
+│   ├── system-prompt.md      # Agent davranışı (UI'dan düzenlenebilir)
 │   └── src/
-│       ├── agent.js              # 🤖 Agentic Loop: Ana yapay zeka beyin döngüsü (Tool'ları burada kullanır)
-│       ├── tools.js              # Proje/Görev PM sistem fonksiyonları
-│       ├── docker-tools.js       # Docker iletişimini sağlayan JS modülü
-│       ├── fs-tools.js           # Sistemde dosya yaratma ve konsola komut gönderme
-│       ├── mysql-admin-tools.js  # Kullanıcının MySQL sunucusunda DB var etmesi için
-│       └── db.js                 # Uygulamanın kendi MySQL veya SQLite veri bağlantısı
+│       ├── agent.js          # 🤖 Claude CLI subprocess + agentic tool loop
+│       ├── tools.js          # PM araçları (proje, görev, rapor)
+│       ├── docker-tools.js   # Docker Compose yönetimi
+│       ├── fs-tools.js       # Dosya sistemi & terminal komutları
+│       ├── mysql-admin-tools.js  # MySQL DB yönetimi
+│       └── db.js             # MySQL/SQLite bağlantı yöneticisi
 │
 └── frontend/
     └── src/
-        ├── App.jsx               # Ana Uygulama bileşeni ve Animasyon sıraları
+        ├── App.jsx           # Ana layout, mesaj state, animasyon
         └── components/
-            ├── AgentFlowCanvas.jsx  # Bileşenler arası iletişimin oklarla görüldüğü harita
-            ├── ChatPanel.jsx        # Kullanıcının yapay zeka ile konuştuğu panel
-            └── ProjectsSidebar.jsx  # Tüm projeler, servislerin listelendiği Sidebar
+            ├── AgentFlowCanvas.jsx   # React Flow mimari haritası
+            ├── ChatPanel.jsx         # Sohbet arayüzü + ayarlar
+            └── ProjectsSidebar.jsx   # Proje listesi + Docker kontrolleri
 ```
+
+---
+
+## 📋 27 Araç — Kategoriler
+
+| Kategori | Araç Sayısı | Araçlar |
+|---|---|---|
+| **PM** | 6 | get_projects, create_project, get_tasks, create_task, update_task_status, generate_report |
+| **Docker** | 9 | docker_status, docker_list_containers, docker_get_logs, docker_start/stop/restart_service, docker_get_stats, docker_inspect_service, docker_rebuild_service |
+| **MySQL Admin** | 6 | mysql_create_database, mysql_run_sql, mysql_run_sql_batch, mysql_list_databases, mysql_list_tables, mysql_update_credentials |
+| **Dosya Sistemi** | 6 | create_file, read_file, list_directory, create_directory, delete_file, run_command |
+
+---
+
+## 📝 Notlar
+
+- `claude login` ile **tek seferlik** giriş yeterlidir — token ~1 yıl geçerlidir
+- MySQL (Laragon vb.) çalışmıyorsa `.env`'de `USE_SQLITE=true` yapın
+- `system-prompt.md` dosyasını UI'daki ⚙️ butonuyla düzenleyebilirsiniz
+- Hot reload: hem frontend hem backend dosya değişikliklerinde otomatik yenilenir
