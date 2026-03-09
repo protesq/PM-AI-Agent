@@ -86,7 +86,7 @@ export default function App() {
       setMessages((prev) => [...prev, { role: "agent", text: "", loading: true, id: loadingId }]);
 
       try {
-        const res = await sendAgentMessage(message);
+        const res = await sendAgentMessage(message, messages.filter((m) => !m.loading));
         const { data, steps, error } = res.data;
 
         setMessages((prev) =>

@@ -1,7 +1,7 @@
 import axios from "axios";
 
-export const sendAgentMessage = (message) =>
-  axios.post("/api/agent/request", { message });
+export const sendAgentMessage = (message, history = []) =>
+  axios.post("/api/agent/request", { message, history });
 
 export const getProjects = () => axios.get("/api/projects");
 

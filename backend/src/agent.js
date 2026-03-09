@@ -1,6 +1,6 @@
 const nodePath = require("path");
 const nodeFs = require("fs");
-const { execFile } = require("child_process");
+const { exec } = require("child_process");
 const tools = require("./tools");
 const docker = require("./docker-tools");
 const fsTools = require("./fs-tools");
@@ -19,14 +19,12 @@ function getSystemPrompt() {
 // ── Claude CLI subprocess ile mesaj gönder ──────────────────────────────────
 function callClaudeCLI(prompt) {
   return new Promise((resolve, reject) => {
-    const child = execFile(
-      "claude",
-      ["-p", "--output-format", "json"],
+    const child = exec(
+      'claude -p --output-format json --tools ""',
       {
         maxBuffer: 1024 * 1024 * 10, // 10MB
         timeout: 120000,             // 2 dakika
         windowsHide: true,
-        shell: true,                 // Windows'ta .cmd dosyalarını bulabilmesi için
       },
       (error, stdout, stderr) => {
         // Claude CLI bazen exit code 1 döner ama stdout'ta geçerli JSON olabilir
@@ -49,7 +47,9 @@ function callClaudeCLI(prompt) {
           if (stderr && stderr.includes("rate")) {
             return reject(new Error("Claude kullanım limitine ulaştınız. Lütfen biraz bekleyip tekrar deneyin."));
           }
-          return reject(new Error(`Claude CLI hatası: ${stderr || error.message}`));
+          console.error("[CLAUDE CLI] stderr:", stderr);
+        console.error("[CLAUDE CLI] error:", error.message);
+        return reject(new Error(`Claude CLI hatası: ${stderr || error.message}`));
         }
 
         resolve({ result: "", is_error: true });
@@ -387,17 +387,12 @@ async function executeTool(name, input) {
   return result;
 }
 
-// ── Tool açıklamalarını prompt'a göm ─────────────────────────────────────────
+// ── Tool açıklamalarını prompt'a göm (compact) ────────────────────────────────
 function buildToolDescriptions() {
   return toolDefinitions.map(t => {
-    const params = t.input_schema.properties
-      ? Object.entries(t.input_schema.properties)
-        .map(([k, v]) => `  - ${k}: ${v.description || v.type}${v.enum ? ` (${v.enum.join("|")})` : ""}`)
-        .join("\n")
-      : "  (parametre yok)";
-    const req = t.input_schema.required?.length ? `  Zorunlu: ${t.input_schema.required.join(", ")}` : "";
-    return `### ${t.name}\n${t.description}\n${params}\n${req}`;
-  }).join("\n\n");
+    const req = t.input_schema.required?.length ? `(${t.input_schema.required.join(", ")})` : "()";
+    return `- ${t.name}${req}: ${t.description}`;
+  }).join("\n");
 }
 
 // ── Tool çağrısı parse et ────────────────────────────────────────────────────
@@ -430,8 +425,20 @@ function parseToolCalls(text) {
   return calls;
 }
 
+// ── Önceki chat geçmişini formatla ───────────────────────────────────────────
+function buildChatHistory(history) {
+  if (!history || history.length === 0) return "";
+  // Son 8 mesajı al (4 tur)
+  const recent = history.slice(-8);
+  const lines = recent
+    .filter(m => m.text && !m.loading)
+    .map(m => `${m.role === "user" ? "Kullanıcı" : "Agent"}: ${m.text.substring(0, 500)}`);
+  if (lines.length === 0) return "";
+  return `## ÖNCEKİ KONUŞMA GEÇMİŞİ\n${lines.join("\n")}\n\n`;
+}
+
 // ── Ana Agent Döngüsü (Claude CLI subprocess) ───────────────────────────────
-async function runAgentLoop(userMessage) {
+async function runAgentLoop(userMessage, chatHistory = []) {
   const steps = [];
   const addStep = (step, status, detail = null) => {
     const entry = { step, status, timestamp: new Date().toISOString() };
@@ -444,6 +451,7 @@ async function runAgentLoop(userMessage) {
 
   const systemPrompt = getSystemPrompt();
   const toolDesc = buildToolDescriptions();
+  const priorChatSection = buildChatHistory(chatHistory);
   let conversationHistory = "";
   let finalText = "";
   let reportCreated = null;
@@ -455,10 +463,14 @@ async function runAgentLoop(userMessage) {
       iteration++;
 
       let fullPrompt = `## SİSTEM TALİMATI\n${systemPrompt}\n\n`;
-      fullPrompt += `## KULLANILABILIR ARAÇLAR\nAşağıdaki araçları kullanabilirsin. Araç çağırmak için <tool_call>{"name": "araç_adı", "input": {...}}</tool_call> formatını kullan.\nBirden fazla araç çağırabilirsin. Araç çağırmana gerek yoksa doğrudan cevap ver.\n\n${toolDesc}\n\n`;
+      fullPrompt += `## ARAÇLAR\nAraç çağırmak için: <tool_call>{"name": "araç_adı", "input": {...}}</tool_call>\n${toolDesc}\n\n`;
+
+      if (priorChatSection) {
+        fullPrompt += priorChatSection;
+      }
 
       if (conversationHistory) {
-        fullPrompt += `## ÖNCEKİ KONUŞMA\n${conversationHistory}\n\n`;
+        fullPrompt += `## BU İSTEKTEKİ ÖNCEKİ ADIMLAR\n${conversationHistory}\n\n`;
       }
 
       fullPrompt += `## KULLANICI İSTEĞİ\n${userMessage}`;
@@ -520,17 +532,22 @@ async function runAgentLoop(userMessage) {
         }
 
         let resultString = JSON.stringify(result);
-        if (resultString.length > 15000) {
-          resultString = resultString.substring(0, 15000) + "... [TRUNCATED]";
+        if (resultString.length > 2000) {
+          resultString = resultString.substring(0, 2000) + "... [TRUNCATED]";
         }
 
-        toolResultsForHistory.push(`Araç: ${call.name}\nSonuç: ${resultString}`);
+        toolResultsForHistory.push(`${call.name}: ${resultString}`);
       }
 
-      // Konuşma geçmişini güncelle
-      conversationHistory += `\n### Asistan çıktısı (iterasyon ${iteration}):\n${responseText}\n`;
-      conversationHistory += `\n### Araç sonuçları:\n${toolResultsForHistory.join("\n---\n")}\n`;
-      conversationHistory += `\nAraç sonuçlarına göre devam et. Eğer başka araç çağrısına gerek yoksa kullanıcıya nihai cevabını ver.\n`;
+      // Konuşma geçmişini güncelle — sadece son 2 iterasyonu tut
+      const newEntry = `[iter${iteration}] ${toolResultsForHistory.join(" | ")}\n`;
+      const historyLines = (conversationHistory + newEntry).split("\n");
+      if (historyLines.length > 40) {
+        conversationHistory = historyLines.slice(-40).join("\n");
+      } else {
+        conversationHistory += newEntry;
+      }
+      conversationHistory += `Devam et. Başka araç gerekmiyorsa nihai cevabı ver.\n`;
     }
 
     if (iteration >= MAX_ITERATIONS && !finalText) {

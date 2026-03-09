@@ -3,7 +3,7 @@ const router = express.Router();
 const { runAgentLoop } = require("../agent");
 
 router.post("/request", async (req, res) => {
-  const { message } = req.body;
+  const { message, history } = req.body;
 
   if (!message || typeof message !== "string" || !message.trim()) {
     return res.status(400).json({
@@ -15,7 +15,7 @@ router.post("/request", async (req, res) => {
   }
 
   try {
-    const result = await runAgentLoop(message.trim());
+    const result = await runAgentLoop(message.trim(), Array.isArray(history) ? history : []);
     return res.json({
       success: true,
       data: { response: result.response, report: result.report },
