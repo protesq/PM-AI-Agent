@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Environment variables (GİZLİ BİLGİLER!)
+.env
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Claude CLI local settings
+.claude/

@@ -1,0 +1,17 @@
+{
+  "name": "pm-ai-agent",
+  "version": "1.0.0",
+  "scripts": {
+    "install:all": "cd backend && npm install && cd ../frontend && npm install",
+    "predev": "cd backend && npm install",
+    "dev": "concurrently --kill-others-on-fail --names \"API,UI\" --prefix-colors \"green,blue\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend":  "cd backend && npx nodemon src/index.js",
+    "dev:frontend": "cd frontend && npm run dev",
+    "docker":  "docker compose up --build --force-recreate",
+    "stop":    "docker compose down",
+    "clean":   "docker compose down -v --remove-orphans"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

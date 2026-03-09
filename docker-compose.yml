@@ -1,0 +1,74 @@
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend/src:/app/src
+    depends_on:
+      - backend
+    environment:
+      API_TARGET: http://backend:5000
+    restart: unless-stopped
+    networks:
+      - pm_network
+
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend/src:/app/src
+      # Docker socket — agent'ın host daemon'ına CLI erişimi için
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Compose dosyası — agent docker compose komutlarını çalıştırabilsin
+      - .:/app/compose:ro
+    depends_on:
+      - db
+    env_file:
+      - .env
+    environment:
+      # Docker içinde DB host adı "db" olmalı (.env'deki localhost'u override eder)
+      MYSQL_HOST: db
+      COMPOSE_PROJECT_NAME: aiagent
+      COMPOSE_FILE: /app/compose/docker-compose.yml
+    restart: unless-stopped
+    networks:
+      - pm_network
+
+  db:
+    image: mysql:8
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+    networks:
+      - pm_network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: db
+      PMA_USER: admin
+      PMA_PASSWORD: secret
+    depends_on:
+      - db
+    restart: unless-stopped
+    networks:
+      - pm_network
+
+networks:
+  pm_network:
+    driver: bridge
+
+volumes:
+  mysql_data:

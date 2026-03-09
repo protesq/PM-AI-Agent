@@ -1,0 +1,29 @@
+CREATE DATABASE IF NOT EXISTS projectdb;
+USE projectdb;
+
+CREATE TABLE projects (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  status VARCHAR(50) DEFAULT 'active',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE tasks (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  project_id INT,
+  title VARCHAR(255) NOT NULL,
+  status VARCHAR(50) DEFAULT 'todo',
+  assigned_to VARCHAR(255),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+);
+
+CREATE TABLE reports (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  project_id INT,
+  content TEXT,
+  created_by_agent BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+);
